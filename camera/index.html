@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	  <meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="utf-8">
+		<title>.GIF CAMERA</title>
+
+		<style media="screen">
+			* {
+				margin: 0;
+				padding: 0;
+			}
+			#container {
+				background-color: #6BCD6F;
+				width: 100%;
+				height: 100vh;
+			}
+			#gifBtn{
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				width: 100%;
+				height: 60px;
+				z-index: 100;
+				font-size: 24pt;
+				font-style: oblique;
+				background-color: #0E8B98;
+				color: white;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container">
+			<button id="gifBtn" onclick="makeGif()">Take new gif!</button>
+		</div>
+
+		<script src="node_modules/firebase/firebase.js" charset="utf-8"></script>
+		<script src="node_modules/gifshot/build/gifshot.js" charset="utf-8"></script>
+
+		<script type="text/javascript">
+			var config = {
+				apiKey: "AIzaSyB7dZlnz7JkXDkm0kSbIRajsyz7vGqA0zA",
+				authDomain: "gif-app.firebaseapp.com",
+				databaseURL: "https://gif-app.firebaseio.com",
+				storageBucket: "gif-app.appspot.com",
+			};
+			firebase.initializeApp(config);
+			var database = firebase.database();
+
+		</script>
+
+		<!--INTERFACE-->
+		<script>
+			var background = document.getElementById('container');
+			//EVENT LISTENERS
+			document.addEventListener("keydown", function(e) {
+				console.log(e.keyCode);
+		    if (e.keyCode == 13) {
+		      console.log("enter pressed");
+		    } else if (e.keyCode == 32){
+					makeGif();
+					console.log("space pressed");
+				}
+		  }, false);
+
+			function makeGif(){
+				background.style.backgroundColor = "red";
+				setTimeout(function(){background.style.backgroundColor = "#6BCD6F";},4000);
+				console.log("making new gif");
+				gifshot.createGIF({
+					keepCameraOn: true,
+			    gifWidth: 256,
+					gifHeight: 192,
+			    numFrames: 30,
+			    sampleInterval: 20,
+			    numWorkers: 10
+				}, function (obj) {
+			    if (!obj.error) {
+		        var image = obj.image;
+						console.log("created new gif");
+						database.ref().child("gifs").push(image,function(){console.log("pushed new gif");});
+			    } else {
+						console.warn(obj.error);
+					}
+				});
+			}
+
+</script>
+	</body>
+</html>

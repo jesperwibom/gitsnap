@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	  <meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="utf-8">
+		<title>.GIF DISPLAY</title>
+
+		<style media="screen">
+			* {
+				margin: 0;
+				padding: 0;
+			}
+			#gifs{
+				padding-top: 40px;
+				padding-left: 15px;
+				background-color: black;
+				min-height: 100vh;
+			}
+			.gif {
+				background-color: red;
+				width: 256px;
+				height: 192px;
+			}
+
+			#fullDiv{
+				position: absolute;
+				top:0;
+				left: 0;
+				width: 100%;
+				height: 100vh;
+				z-index: 100;
+				background-color: #252525;
+				overflow: hidden;
+			}
+
+			#fullGif{
+				width: 800px;
+				height: 600px;
+				overflow: hidden;
+			}
+
+
+		</style>
+	</head>
+	<body>
+		<div id="gifs">
+
+			<div id="fullDiv" class="visible">
+				<img id="fullGif" src="">
+			</div>
+		</div>
+
+
+		<script src="node_modules/firebase/firebase.js" charset="utf-8"></script>
+		<script type="text/javascript">
+			var config = {
+				apiKey: "AIzaSyB7dZlnz7JkXDkm0kSbIRajsyz7vGqA0zA",
+				authDomain: "gif-app.firebaseapp.com",
+				databaseURL: "https://gif-app.firebaseio.com",
+				storageBucket: "gif-app.appspot.com",
+			};
+			firebase.initializeApp(config);
+			var database = firebase.database();
+
+			var recentGifs = database.ref('gifs').limitToLast(9);
+			recentGifs.on('child_added', function(snapshot) {
+			  addGif(snapshot.val());
+			});
+		</script>
+
+		<!--INTERFACE-->
+		<script>
+			//CACHED ELEMENTS
+		  var gifsDiv = document.getElementById('gifs');
+			var fullGifDiv = document.getElementById('fullDiv');
+			var fullGifImg = document.getElementById('fullGif');
+
+			//EVENT LISTENERS
+			document.addEventListener("keydown", function(e) {
+				console.log(e.keyCode);
+		    if (e.keyCode == 13) {
+		      toggleFullScreen();
+		    } else if (e.keyCode == 32){
+					//only used while testing
+					//addGif();
+				}
+		  }, false);
+
+			/********* METHODS *********/
+
+			//ADD GIF
+			function addGif(gif){
+				var gifImg = document.createElement('img');
+				var gifs = document.getElementsByClassName("gif");
+
+				gifImg.src = gif;
+				gifImg.className += " gif";
+
+				displayGif(gif);
+
+				if(gifs[8] != null){
+					gifsDiv.removeChild(gifs[8]);
+				}
+
+				gifsDiv.insertBefore(gifImg, gifs[0]);
+			}
+
+			//DISPLAY GIF FULLY
+			var currentTimeout;
+			function displayGif(gif){
+				clearTimeout(currentTimeout);
+				fullGifImg.src = gif;
+				fullDiv.style.display = 'block';
+				currentTimeout = setTimeout(function(){
+					console.log("hiding full gif");
+					fullDiv.style.display = 'none';
+				}, 6000);
+			}
+
+			//TOGGLE FULLSCREEN
+		  function toggleFullScreen() {
+		    if (!document.mozFullScreen && !document.webkitFullScreen) {
+		      if (gifsDiv.mozRequestFullScreen) {
+		        gifsDiv.mozRequestFullScreen();
+		      } else {
+		        gifsDiv.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+		      }
+		    } else {
+		      if (document.mozCancelFullScreen) {
+		        document.mozCancelFullScreen();
+		      } else {
+		        document.webkitCancelFullScreen();
+		      }
+		    }
+		  }
+</script>
+	</body>
+</html>

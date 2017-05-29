@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	  <meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="utf-8">
+		<title>Camera booth</title>
+		<style media="screen">
+			* {
+				padding: 0;
+				margin: 0;
+			}
+
+			#button-div{
+				display: block;
+				position: fixed;
+				background-color: white;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				padding: 6px;
+				z-index: 10;
+			}
+			#view-fix{
+				display: block;
+				width: 100%;
+				height: 60px;
+			}
+			#gif-button {
+				width: 100%;
+				height: 50px;
+				background-color: #4CAF50;
+		    border: none;
+		    color: white;
+		    padding: 15px 32px;
+		    text-align: center;
+		    text-decoration: none;
+		    display: inline-block;
+		    font-size: 16px;
+				border-radius: 5px;
+			}
+			#gif-button:hover{
+				background-color: #6CBD6F;
+			}
+			#gif-button:active{
+				background-color: #A7D9A9;
+			}
+			.gifs{
+				display: block;
+				width: 100%;
+				max-width: 600px;
+				margin-left: auto;
+				margin-right: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="gif-div"></div>
+		<div id="view-fix"></div>
+		<div id="button-div">
+			<button id="gif-button" type="button" name="button">Make New GIF</button>
+		</div>
+
+
+
+		<script src="node_modules/firebase/firebase.js" charset="utf-8"></script>
+		<script src="node_modules/gifshot/build/gifshot.js" charset="utf-8"></script>
+
+		<script type="text/javascript">
+
+			var config = {
+				apiKey: "AIzaSyB7dZlnz7JkXDkm0kSbIRajsyz7vGqA0zA",
+				authDomain: "gif-app.firebaseapp.com",
+				databaseURL: "https://gif-app.firebaseio.com",
+				storageBucket: "gif-app.appspot.com",
+			};
+
+			firebase.initializeApp(config);
+
+			var database = firebase.database();
+
+
+
+			var storage = firebase.storage();
+			var storageRef = storage.ref();
+			var gifsRef = storageRef.child("gifs");
+
+
+			var body = document.body, html = document.documentElement, gBtn = document.getElementById("gif-button"), gDiv = document.getElementById("gif-div");
+
+
+			gBtn.addEventListener('click', function(e) {
+				makeGif();
+			}, false);
+
+
+
+
+
+			function makeGif(){
+				gifshot.createGIF({
+					keepCameraOn: true,
+			    gifWidth: 240,
+					gifHeight: 200,
+			    numFrames: 24,
+			    sampleInterval: 20,
+			    numWorkers: 10
+				}, function (obj) {
+			    if (!obj.error) {
+
+		        var image = obj.image;
+						showGif(image);
+						database.ref().child("gifs").push(image,function(){console.log("pushed");});
+						//uploadGif(image);
+
+
+			    } else {
+						console.warn("could not make new gif");
+						console.warn(obj.error);
+					}
+				});
+			}
+
+			var recentGifs = database.ref('gifs').limitToLast(10);
+
+			recentGifs.on('child_added', function(snapshot) {
+			  showGif(snapshot.val());
+			});
+
+
+
+			function showGif(image){
+				var animatedImage = document.createElement('img');
+				animatedImage.src = image;
+				animatedImage.className += " gifs";
+				gDiv.appendChild(animatedImage);
+			}
+
+
+
+			function uploadGif(image){
+
+				var base64 = image.slice(22);
+				var blob = b64toBlob(base64, "image/gif");
+
+				var name = "giffy" + (Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000) + ".gif";
+
+
+				// Create the file metadata
+				var metadata = {
+					contentType: 'image/gif'
+				};
+
+
+				// Upload file and metadata to the object 'images/mountains.jpg'
+				var uploadTask = storageRef.child('gifs/' + name).put(blob, metadata);
+
+				// Listen for state changes, errors, and completion of the upload.
+				uploadTask.on(firebase.storage.TaskEvent.STATE_CHANGED, // or 'state_changed'
+					function(snapshot) {
+						// Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+						var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+						console.log('Upload is ' + progress + '% done');
+						switch (snapshot.state) {
+							case firebase.storage.TaskState.PAUSED: // or 'paused'
+								console.log('Upload is paused');
+								break;
+							case firebase.storage.TaskState.RUNNING: // or 'running'
+								console.log('Upload is running');
+								break;
+						}
+					}, function(error) {
+					switch (error.code) {
+						case 'storage/unauthorized':
+							// User doesn't have permission to access the object
+							break;
+						case 'storage/canceled':
+							// User canceled the upload
+							break;
+						case 'storage/unknown':
+							// Unknown error occurred, inspect error.serverResponse
+							break;
+					}
+				}, function() {
+					// Upload completed successfully, now we can get the download URL
+					var downloadURL = uploadTask.snapshot.downloadURL;
+				});
+			}
+
+
+
+			function b64toBlob(b64Data, contentType, sliceSize) {
+			  contentType = contentType || '';
+			  sliceSize = sliceSize || 512;
+
+			  var byteCharacters = atob(b64Data);
+			  var byteArrays = [];
+
+			  for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+			    var slice = byteCharacters.slice(offset, offset + sliceSize);
+
+			    var byteNumbers = new Array(slice.length);
+			    for (var i = 0; i < slice.length; i++) {
+			      byteNumbers[i] = slice.charCodeAt(i);
+			    }
+
+			    var byteArray = new Uint8Array(byteNumbers);
+
+			    byteArrays.push(byteArray);
+			  }
+
+			  var blob = new Blob(byteArrays, {type: contentType});
+			  return blob;
+			}
+
+		</script>
+	</body>
+</html>

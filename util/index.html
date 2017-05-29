@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	  <meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="utf-8">
+		<title>.GIF UTIL</title>
+
+		<style media="screen">
+			* {
+				margin: 0;
+				padding: 0;
+			}
+
+			.container {
+				display: block;
+				width: 100%;
+				text-align: center;
+				margin-left: auto;
+				margin-right: auto;
+				background-color: black;
+			}
+			#gifs{
+				display: inline-block;
+				margin-left: auto;
+				margin-right: auto;
+				background-color: black;
+				min-height: 100vh;
+			}
+			.gif {
+				display: inline-block;
+				width: 256px;
+				height: 192px;
+			}
+
+
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div id="gifs">
+
+			</div>
+		</div>
+
+		<script src="node_modules/firebase/firebase.js" charset="utf-8"></script>
+
+		<script type="text/javascript">
+			var config = {
+				apiKey: "AIzaSyB7dZlnz7JkXDkm0kSbIRajsyz7vGqA0zA",
+				authDomain: "gif-app.firebaseapp.com",
+				databaseURL: "https://gif-app.firebaseio.com",
+				storageBucket: "gif-app.appspot.com",
+			};
+			firebase.initializeApp(config);
+			var database = firebase.database();
+
+
+			function httpGetAsync(_url, _callback) {
+			    var xmlHttp = new XMLHttpRequest();
+			    xmlHttp.onreadystatechange = function() {
+			        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+			            _callback(xmlHttp.responseText);
+			    }
+			    xmlHttp.open("GET", _url, true); // true for asynchronous
+			    xmlHttp.send(null);
+			}
+
+			function getTotalGifs(){
+				var shallowUrl = "https://gif-app.firebaseio.com/gifs.json?shallow=true&print=pretty";
+				httpGetAsync(shallowUrl, function(obj){
+					var gifCount = 0;
+					var data = JSON.parse(obj);
+					for (var key in data){
+						if(data.hasOwnProperty(key)){
+							gifCount++;
+						}
+					}
+					console.log(gifCount);
+				});
+			}
+
+			getTotalGifs();
+
+			var gifArrCounter = 0;
+
+			function getGifsInArr(){
+				var shallowUrl = "https://gif-app.firebaseio.com/gifArr.json?shallow=true&print=pretty";
+				httpGetAsync(shallowUrl, function(obj){
+					var gifArrCount = 0;
+					var data = JSON.parse(obj);
+					for (var key in data){
+						if(data.hasOwnProperty(key)){
+							gifArrCount++;
+						}
+					}
+					console.log(gifArrCount);
+					gifArrCounter = gifArrCount;
+				});
+			}
+
+			getGifsInArr();
+
+			var gifArrNextName = "001";
+			var nextCounter = 0;
+
+			function updateGifArrName(){
+				nextCounter = gifArrCounter +1;
+				console.log("nextCounter: "+nextCounter);
+				if(nextCounter < 10){
+					gifArrNextName = "00"+nextCounter;
+				} else if(nextCounter < 100){
+					gifArrNextName = "0"+nextCounter;
+				} else {
+					gifArrNextName = ""+nextCounter;
+				}
+				console.log("gifArrNextName "+ gifArrNextName);
+			}
+
+			//updateGifArrName();
+
+
+			var gifArrRef = database.ref('gifArr');
+			var gifRef = database.ref('gifs');
+			var count = 0;
+			var recentGifs = database.ref('gifs').limitToFirst(10);
+
+			function clearGifArr(){
+				gifArrRef.remove()
+				  .then(function() {
+				    console.log("Remove succeeded.");
+						getGifsInArr();
+				  })
+				  .catch(function(error) {
+				    console.log("Remove failed: " + error.message)
+				  });
+			}
+
+			recentGifs.on('child_added', function(snapshot) {
+				count++;
+			  addGif(snapshot.key, snapshot.val(),count);
+			});
+
+			gifArrRef.on('child_added', function(snapshot){
+				addGif(snapshot.key, snapshot.val().data, snapshot.key);
+			});
+
+
+			function removeGif(key){
+				gifRef.child(key).remove().then(function(){
+					console.log(key + " removed succesfully");
+				});
+			}
+
+			function moveGif(key){
+				updateGifArrName();
+				database.ref('gifs/'+key).once('value')
+					.then(function(snapshot){
+
+						console.log("currently "+gifArrNextName+" in gifArr");
+						console.log("read key: "+key);
+						gifArrRef.child(gifArrNextName).set({
+							data: snapshot.val(),
+							likes: 0,
+							blocked: false,
+							sort: nextCounter
+						})
+						.then(function(){
+							getGifsInArr();
+							console.log("move succesfull");
+						})
+						.catch(function(e){
+							console.log("move failed");
+						});
+
+					});
+
+			}
+
+			function testGif(key,nr){
+				database.ref('gifs/'+key).once('value')
+					.then(function(snapshot){
+						console.log("read key: "+key);
+						addGif(snapshot.key, snapshot.val(),nr);
+					});
+			}
+
+		</script>
+
+
+		<script>
+		  var gifsDiv = document.getElementById('gifs');
+
+			function addGif(name, gif, nr){
+				var gifImg = document.createElement('img');
+				var gifs = document.getElementsByClassName("gif");
+				gifImg.src = gif;
+				gifImg.className += " gif";
+				//console.log(gifImg.src);
+				gifImg.addEventListener("click", function(e){
+					var key = name +"";
+					console.log(key +" is nr "+ nr);
+					moveGif(key);
+				});
+				gifsDiv.insertBefore(gifImg, gifs[0]);
+			}
+		</script>
+	</body>
+</html>

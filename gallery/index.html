@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	  <meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="utf-8">
+		<title>.GIF GALLERY</title>
+
+		<style media="screen">
+			* {
+				margin: 0;
+				padding: 0;
+			}
+
+			.container {
+				display: block;
+				width: 100%;
+				text-align: center;
+				margin-left: auto;
+				margin-right: auto;
+				background-color: black;
+			}
+			#gifs{
+				display: inline-block;
+				margin-left: auto;
+				margin-right: auto;
+				background-color: black;
+				min-height: 100vh;
+			}
+			.gif {
+				display: inline-block;
+				width: 256px;
+				height: 192px;
+			}
+
+			#fullDiv{
+				display: none;
+				justify-content: center;
+				position: absolute;
+				top:0;
+				left: 0;
+				width: 100%;
+				height: 100vh;
+				z-index: 100;
+				background-color: #252525;
+				overflow: hidden;
+			}
+
+			#fullGif{
+				display: inline-block;
+				margin-left: auto !important;
+				margin-right: auto !important;
+				height: 100vh;
+				overflow: hidden;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div id="gifs">
+
+				<div id="fullDiv" class="visible">
+					<img id="fullGif" src="">
+				</div>
+			</div>
+		</div>
+
+		<script src="node_modules/firebase/firebase.js" charset="utf-8"></script>
+		<script type="text/javascript">
+			var config = {
+				apiKey: "AIzaSyB7dZlnz7JkXDkm0kSbIRajsyz7vGqA0zA",
+				authDomain: "gif-app.firebaseapp.com",
+				databaseURL: "https://gif-app.firebaseio.com",
+				storageBucket: "gif-app.appspot.com",
+			};
+			firebase.initializeApp(config);
+			var database = firebase.database();
+
+
+
+			var shallowUrl = "https://gif-app.firebaseio.com/gifs.json?shallow=true&print=pretty";
+
+			function httpGetAsync(_url, _callback) {
+			    var xmlHttp = new XMLHttpRequest();
+			    xmlHttp.onreadystatechange = function() {
+			        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+			            _callback(xmlHttp.responseText);
+			    }
+			    xmlHttp.open("GET", _url, true); // true for asynchronous
+			    xmlHttp.send(null);
+			}
+
+			var gifCount = 0;
+
+			httpGetAsync(shallowUrl, function(obj){
+
+
+				var data = JSON.parse(obj);
+
+
+				for (var key in data){
+					if(data.hasOwnProperty(key)){
+						gifCount++;
+						//var val = obj[key];
+						//console.log(key);
+					}
+				}
+				console.log(gifCount);
+
+			});
+
+			var gifsLoadedCount = 0;
+			var recentGifs = database.ref('gifs').limitToFirst(10);
+			recentGifs.on('child_added', function(snapshot) {
+				gifsLoadedCount++;
+				//console.log(snapshot.key);
+			  addGif(snapshot.key, snapshot.val());
+			});
+
+			var gifsRef = database.ref('gifs');
+
+			function getGif(key){
+				gifsRef.child(key).once("value", function(snap){
+					addGif(snap.val());
+				});
+			}
+
+
+		</script>
+
+		<!--INTERFACE-->
+		<script>
+			//CACHED ELEMENTS
+		  var gifsDiv = document.getElementById('gifs');
+			var fullGifDiv = document.getElementById('fullDiv');
+			var fullGifImg = document.getElementById('fullGif');
+
+			//EVENT LISTENERS
+			document.addEventListener("keydown", function(e) {
+				console.log(e.keyCode);
+		    if (e.keyCode == 13) {
+		      toggleFullScreen();
+		    }
+		  }, false);
+
+			fullGifDiv.addEventListener("click", function(e){
+				fullDiv.style.display = 'none';
+			});
+
+			/********* METHODS *********/
+
+			//ADD GIF
+			function addGif(name, gif){
+				var gifImg = document.createElement('img');
+				var gifs = document.getElementsByClassName("gif");
+
+				gifImg.src = gif;
+				gifImg.className += " gif";
+
+				gifImg.addEventListener("click", function(e){
+					displayGif(gif);
+					console.log(name);
+				});
+
+				gifsDiv.insertBefore(gifImg, gifs[0]);
+			}
+
+			//DISPLAY GIF FULLY
+			function displayGif(gif){
+				fullGifImg.src = gif;
+				fullDiv.style.display = 'flex';
+			}
+
+			//TOGGLE FULLSCREEN
+		  function toggleFullScreen() {
+		    if (!document.mozFullScreen && !document.webkitFullScreen) {
+		      if (gifsDiv.mozRequestFullScreen) {
+		        gifsDiv.mozRequestFullScreen();
+		      } else {
+		        gifsDiv.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+		      }
+		    } else {
+		      if (document.mozCancelFullScreen) {
+		        document.mozCancelFullScreen();
+		      } else {
+		        document.webkitCancelFullScreen();
+		      }
+		    }
+		  }
+</script>
+	</body>
+</html>
